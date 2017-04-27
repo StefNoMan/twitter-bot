@@ -32,8 +32,10 @@ class App
 	 */
 	public function loadDependencies()
 	{
+		require_once('user.class.php');
+		require_once('status.class.php');
 		require_once('twitter.class.php');
-		require_once('twitter.tools.php');
+		require_once('tools.class.php');
 	}
 
 
@@ -44,8 +46,8 @@ class App
 	{
 		ob_start();
 
-		$this->playConcours();
-		// $this->randomTweet();
+		// $this->playConcours();
+		$this->randomTweet();
 		// $this->favoriteMyTweets();
 		// $this->followToGetFollowBack();
 
@@ -79,7 +81,7 @@ class App
 
 		foreach( $response->statuses as $status )
 		{
-			Tools::displayTweet($status);
+			// Tools::displayTweet($status);
 			if ( ! $status->retweeted ) 
 			{
 				if ( Tools::isUserTrustable( $status->user ) )
@@ -109,24 +111,16 @@ class App
 
 	public function randomTweet()
 	{
-		$message_possibles = array(
-			"Coucou les #twittos ! comment ça va aujourd'hui ??", 
-			"Pff ... Trop marre des gens idiots", 
-			"Qu'est ce qu'on mange ce midi ? :)", 
-			"Salut les gens!", 
-			"Petite #sondage: quelle est votre couleur préférée ? moi c'est le violet hihi :)", 
-			"C'est fou ce truc !! --> ╲⎝⧹", 
-			"l'#humour résume si bien la réalité.. Tout y est pour tout comprendre !!!! ",
-			"J'aime bien quand les histoires finissent bien #bonheur",
-		);
+		$f_contents = file( __DIR__ . "/quotes.txt"); 
+		$random_message = $f_contents[rand(0, count($f_contents) - 1)];
+
 		$smileys_possibles = array(
 			'😁', '😍', '😉', '😇', '😜', '😋', '😚', '😝', '🤓', '😀', '😻', '💩'
 		);
 
-		$msg_index = rand( 0, count( $message_possibles ) - 1 );
 		$smiley_index = rand( 0, count( $smileys_possibles ) - 1 );
 
-		$message = $message_possibles[$msg_index] . ' ' . $smileys_possibles[$smiley_index];
+		$message = $random_message . ' ' . $smileys_possibles[$smiley_index];
 		$this->twitter->tweet($message);
 	}
 
