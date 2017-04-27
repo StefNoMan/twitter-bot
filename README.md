@@ -7,5 +7,5 @@ This project is more like a Twitter Bot Framework. It simplifies some commons Tw
 - Favorite
 - and so on ...
 
-This project is currently in development and can still have bugs ! fell free to contribute if you find some :)
+This project is currently in development and can still have bugs ! feel free to contribute if you find some :)
 Thx
