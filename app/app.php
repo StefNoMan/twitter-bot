@@ -5,7 +5,10 @@ namespace Stefnoman\Twitterbot;
 class App 
 {
 	const
-		rootdir = __DIR__;
+		ROOT_DIR = __DIR__,
+		VIEWS_DIR = __DIR__ . '/views',
+		CLASSES_DIR = __DIR__ . '/classes',
+		ACTIONS_DIR = __DIR__ . '/actions';
 
 	private 
 		$config = array(),
@@ -14,7 +17,7 @@ class App
 
 	function __construct() 
 	{
-		$this->config = require_once('config.php');
+		$this->config = require_once( self::ROOT_DIR . '/config.php');
 		
 		$this->loadDependencies();
 
@@ -32,10 +35,10 @@ class App
 	 */
 	public function loadDependencies()
 	{
-		require_once('user.class.php');
-		require_once('status.class.php');
-		require_once('twitter.class.php');
-		require_once('tools.class.php');
+		require_once( self::CLASSES_DIR . '/user.class.php');
+		require_once( self::CLASSES_DIR . '/status.class.php' );
+		require_once( self::CLASSES_DIR . '/twitter.class.php' );
+		require_once( self::CLASSES_DIR . '/tools.class.php' );
 	}
 
 
@@ -46,10 +49,31 @@ class App
 	{
 		ob_start();
 
-		// $this->playConcours();
-		$this->randomTweet();
-		// $this->favoriteMyTweets();
-		// $this->followToGetFollowBack();
+		if (isset( $_REQUEST['action'] ))
+		{
+			switch ($_REQUEST['action'])
+			{
+				case 'playConcours':
+					$this->playConcours();
+					break;
+				
+				case 'randomTweet':
+					$this->randomTweet();
+					break;
+				
+				case 'favoriteMyTweets':
+					// $this->favoriteMyTweets();
+					break;
+				
+				case 'followToGetFollowBack':
+					// $this->followToGetFollowBack();
+					break;
+				
+				default:
+					# code...
+					break;
+			}
+		}
 
 		$content = ob_get_flush();
 		$this->render($content);
@@ -61,9 +85,10 @@ class App
 	 */
 	public function render( $content )
 	{
-		include( dirname(__DIR__) . '/views/header.html');
+		include( self::VIEWS_DIR . '/header.html');
+		include( self::VIEWS_DIR . '/form.html');
 		echo $content;
-		include( dirname(__DIR__) . '/views/footer.html');
+		include( self::VIEWS_DIR . '/footer.html');
 	}
 
 
@@ -88,6 +113,7 @@ class App
 				{
 					if ( preg_match( '/follow/i', $status->text ) && preg_match( '/rt/i', $status->text ) )
 					{
+						
 						Tools::displayTweet( $status );
 						if ( !empty( $status->entities->user_mentions ) )
 						{
@@ -120,7 +146,7 @@ class App
 
 		$smiley_index = rand( 0, count( $smileys_possibles ) - 1 );
 
-		$message = $random_message . ' ' . $smileys_possibles[$smiley_index];
+		$message = $random_message . ' #CitationDuJour';
 		$this->twitter->tweet($message);
 	}
 
