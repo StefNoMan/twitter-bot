@@ -24,4 +24,10 @@ class Tools
 		return $trustable;
 	}
 
+
+	public static function sanitize( $string, $type = 'text' )
+	{
+		return strip_tags( $string );
+	}
+
 }

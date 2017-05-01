@@ -12,6 +12,7 @@ class App
 
 	private 
 		$config = array(),
+		$notifications = array(),
 		$twitter;
 
 
@@ -35,7 +36,7 @@ class App
 	 */
 	public function loadDependencies()
 	{
-		require_once( self::CLASSES_DIR . '/user.class.php');
+		require_once( self::CLASSES_DIR . '/user.class.php' );
 		require_once( self::CLASSES_DIR . '/status.class.php' );
 		require_once( self::CLASSES_DIR . '/twitter.class.php' );
 		require_once( self::CLASSES_DIR . '/tools.class.php' );
@@ -47,36 +48,50 @@ class App
 	 */
 	public function run()
 	{
-		ob_start();
-
-		if (isset( $_REQUEST['action'] ))
-		{
-			switch ($_REQUEST['action'])
+		try {
+			$action = ( isset($_REQUEST['action']) ) ? $_REQUEST['action'] : 'default' ;
+			if (isset( $_REQUEST['action'] ))
 			{
-				case 'playConcours':
-					$this->playConcours();
-					break;
-				
-				case 'randomTweet':
-					$this->randomTweet();
-					break;
-				
-				case 'favoriteMyTweets':
-					// $this->favoriteMyTweets();
-					break;
-				
-				case 'followToGetFollowBack':
-					// $this->followToGetFollowBack();
-					break;
-				
-				default:
-					# code...
-					break;
+				switch ($_REQUEST['action'])
+				{
+					case 'playConcours':
+						$vars = $this->playConcours();
+						break;
+					
+					case 'randomTweet':
+						$vars = $this->randomTweet();
+						break;
+					
+					case 'favoriteMyTweets':
+						// $vars = $this->favoriteMyTweets();
+						break;
+					
+					case 'followToGetFollowBack':
+						// $vars = $this->followToGetFollowBack();
+						break;
+					
+					default:
+						$vars = array( 
+							'view' => 'default'
+						);
+						$this->notifications = array( 
+							'level' => 'error',
+							'message' => 'Action inconnue',
+						);
+						break;
+				}
+			
 			}
-		}
 
-		$content = ob_get_flush();
-		$this->render($content);
+			$view_file = self::VIEWS_DIR . '/' . $action . '.html';
+			if ( file_exists( $view_file ) )
+				echo $this->render( $view_file );
+			else
+				throw new AppException("View (". $view_file .") not found", 1);
+			
+		} catch (AppException $e) {
+			echo $e->getMessage();
+		}
 	}
 
 
@@ -85,10 +100,12 @@ class App
 	 */
 	public function render( $content )
 	{
+		ob_start();
 		include( self::VIEWS_DIR . '/header.html');
 		include( self::VIEWS_DIR . '/form.html');
 		echo $content;
 		include( self::VIEWS_DIR . '/footer.html');
+		$content = ob_get_flush();
 	}
 
 
@@ -164,3 +181,8 @@ class App
 	}
 }
 
+
+class AppException extends \Exception
+{
+
+}
