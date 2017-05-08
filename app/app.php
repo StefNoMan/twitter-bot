@@ -6,19 +6,22 @@ class App
 {
 	const
 		ROOT_DIR = __DIR__,
+		MODELS_DIR = __DIR__ . '/models',
 		VIEWS_DIR = __DIR__ . '/views',
-		CLASSES_DIR = __DIR__ . '/classes',
-		ACTIONS_DIR = __DIR__ . '/actions';
+		CONTROLLERS_DIR = __DIR__ . '/controllers',
+		CLASSES_DIR = __DIR__ . '/classes';
 
 	private 
-		$config = array(),
-		$notifications = array(),
-		$twitter;
+		$config = array();
+
+	public
+		$twitter,
+		$notifications = array();
 
 
 	function __construct() 
 	{
-		$this->config = require_once( self::ROOT_DIR . '/config.php');
+		$this->config = require_once( self::ROOT_DIR . '/config.php' );
 		
 		$this->loadDependencies();
 
@@ -36,10 +39,12 @@ class App
 	 */
 	public function loadDependencies()
 	{
-		require_once( self::CLASSES_DIR . '/user.class.php' );
-		require_once( self::CLASSES_DIR . '/status.class.php' );
-		require_once( self::CLASSES_DIR . '/twitter.class.php' );
+		require_once( self::CLASSES_DIR . '/controller.class.php' );
 		require_once( self::CLASSES_DIR . '/tools.class.php' );
+
+		require_once( self::MODELS_DIR . '/user.class.php' );
+		require_once( self::MODELS_DIR . '/status.class.php' );
+		require_once( self::MODELS_DIR . '/twitter.class.php' );
 	}
 
 
@@ -49,45 +54,27 @@ class App
 	public function run()
 	{
 		try {
-			$action = ( isset($_REQUEST['action']) ) ? $_REQUEST['action'] : 'default' ;
-			if (isset( $_REQUEST['action'] ))
-			{
-				switch ($_REQUEST['action'])
-				{
-					case 'playConcours':
-						$vars = $this->playConcours();
-						break;
-					
-					case 'randomTweet':
-						$vars = $this->randomTweet();
-						break;
-					
-					case 'favoriteMyTweets':
-						// $vars = $this->favoriteMyTweets();
-						break;
-					
-					case 'followToGetFollowBack':
-						// $vars = $this->followToGetFollowBack();
-						break;
-					
-					default:
-						$vars = array( 
-							'view' => 'default'
-						);
-						$this->notifications = array( 
-							'level' => 'error',
-							'message' => 'Action inconnue',
-						);
-						break;
-				}
-			
-			}
 
-			$view_file = self::VIEWS_DIR . '/' . $action . '.html';
-			if ( file_exists( $view_file ) )
-				echo $this->render( $view_file );
-			else
-				throw new AppException("View (". $view_file .") not found", 1);
+			// Controller
+			$controller = ( isset($_REQUEST['controller']) ) ? Tools::sanitize($_REQUEST['controller']) : 'default' ;
+			$controller_name = ucfirst( strtolower( $controller ) ) . 'Controller';
+			$controller_filepath = self::CONTROLLERS_DIR . '/' . $controller_name . '.php';
+
+			if ( file_exists( $controller_filepath ) )
+			{
+				include_once( $controller_filepath );
+				$controller = new $controller_name( $this );
+				
+				$action = ( isset( $_REQUEST['action'] ) ) ? Tools::sanitize($_REQUEST['action']) : 'defaultAction' ;
+				if ( method_exists( $controller, $action ) )
+					$controller->$action();
+				else
+					throw new AppException("Action (". $action .") not found", 1);
+			}
+			else 
+			{
+				throw new AppException("Controller (". $controller_name .") not found", 1);
+			}
 			
 		} catch (AppException $e) {
 			echo $e->getMessage();
@@ -95,90 +82,40 @@ class App
 	}
 
 
+
 	/**
 	 * Render HTML to the browser
 	 */
-	public function render( $content )
+	public function render( $view = 'index', $vars = array() )
 	{
 		ob_start();
+
 		include( self::VIEWS_DIR . '/header.html');
-		include( self::VIEWS_DIR . '/form.html');
-		echo $content;
+		include( self::VIEWS_DIR . '/' . $view . '.html');
 		include( self::VIEWS_DIR . '/footer.html');
-		$content = ob_get_flush();
-	}
 
+		$template = ob_get_clean();
 
-
-	/**
-	 * Runs a bot task that RT + Follow concours tweets
-	 */
-	public function playConcours()
-	{
-		$response = $this->twitter->search(array(
-			'q' => '#Concours',
-			'count' => 30,
-		));
-
-
-		foreach( $response->statuses as $status )
+		// templating engine
+		$matches = array();
+		if ( preg_match_all( '/{{(\w+)}}/', $template, $matches ) )
 		{
-			// Tools::displayTweet($status);
-			if ( ! $status->retweeted ) 
-			{
-				if ( Tools::isUserTrustable( $status->user ) )
-				{
-					if ( preg_match( '/follow/i', $status->text ) && preg_match( '/rt/i', $status->text ) )
-					{
-						
-						Tools::displayTweet( $status );
-						if ( !empty( $status->entities->user_mentions ) )
-						{
-							foreach ( $status->entities->user_mentions as $key => $value )
-							{
-								var_dump('follow: ', $value);
-								$result = $this->twitter->follow( $value->id_str );
-								if ( isset( $result['errors'] ) )
-								{
-									var_dump( $result['errors'] );
-								}
-							}
-						}
+			foreach ( $matches[0] as $key => $value ) {
+				if ( isset( $matches[1][$key] ) ) {
+					if ( isset( $vars[$matches[1][$key]] ) ) {
+						$template = str_replace( $value, $vars[$matches[1][$key]], $template );
 					}
-					var_dump('RT: ', $this->twitter->retweet($status->id_str) );
+					else
+						throw new AppException("Unknown template variable : {{" . $matches[1][$key] . "}}", 1);
+						
 				}
 			}
 		}
+
+		echo $template;
 	}
 
 
-	public function randomTweet()
-	{
-		$f_contents = file( __DIR__ . "/quotes.txt"); 
-		$random_message = $f_contents[rand(0, count($f_contents) - 1)];
-
-		$smileys_possibles = array(
-			'😁', '😍', '😉', '😇', '😜', '😋', '😚', '😝', '🤓', '😀', '😻', '💩'
-		);
-
-		$smiley_index = rand( 0, count( $smileys_possibles ) - 1 );
-
-		$message = $random_message . ' #CitationDuJour';
-		$this->twitter->tweet($message);
-	}
-
-
-	public function favoriteMyTweets()
-	{
-		# code...
-	}
-
-
-	/** Starts a Follow campaign **/
-	public function followCampaign()
-	{
-		# code...
-	}
 }
 
 

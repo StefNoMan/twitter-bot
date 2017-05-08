@@ -83,6 +83,18 @@ class User
 
 	public function isTrustable()
 	{
-		# code...
+		$trustable = true;
+
+		if ( $this->verified ) {
+			return true;
+		}
+		if ( $this->friends_count > 0 && ( (int)$this->followers_count / (int)$this->friends_count ) < 4 ) {
+			$trustable = false;
+		}
+		if ( $this->followers_count < 3000 ) {
+			$trustable = false;
+		}
+		return $trustable;
 	}
+
 }

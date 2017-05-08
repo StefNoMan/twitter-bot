@@ -120,6 +120,16 @@ use \Abraham\TwitterOAuth\TwitterOAuth;
 	}
 
 
+	public function getUserTimeline( $screen_name )
+	{
+		return $this->get('statuses/user_timeline', [
+			// 'user_id' => $user_id,
+			'screen_name' => $screen_name,
+			// 'follow' => false,
+		]);
+	}
+
+
 
 	public function getTrends()
 	{
